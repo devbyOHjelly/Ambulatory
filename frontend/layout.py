@@ -20,14 +20,6 @@ REF_PANEL_VISIBLE_STYLE = {
     "lineHeight": "1.6",
 }
 
-CTRL_PANEL_VISIBLE_STYLE = {
-    "display": "flex",
-    "flexDirection": "column",
-    "flex": "1",
-    "minHeight": "0",
-    "overflow": "auto",
-}
-
 OPP_PANEL_VISIBLE_STYLE = {
     "display": "flex",
     "flexDirection": "column",
@@ -37,6 +29,21 @@ OPP_PANEL_VISIBLE_STYLE = {
 }
 
 _LEGEND_TEXT = "#cbd5e1"
+_LABEL_STYLE = {
+    "fontSize": "10px",
+    "fontWeight": "600",
+    "textTransform": "uppercase",
+    "letterSpacing": "0.08em",
+    "color": "#64748b",
+    "margin": "10px 0 6px 0",
+}
+_CARD = {
+    "backgroundColor": "#0f172a",
+    "border": "1px solid #1e293b",
+    "borderRadius": "10px",
+    "padding": "12px",
+    "marginBottom": "12px",
+}
 
 
 def _legend_row(swatch: html.Div, label: str) -> html.Div:
@@ -110,41 +117,69 @@ def _map_legend() -> html.Div:
                 },
             ),
             _construct_section(
-                "Coverage",
-                "#60a5fa",
-                [
-                    _legend_row(_swatch_circle("#22c55e"), "Orlando Health"),
-                    _legend_row(_swatch_circle("#ef4444"), "Other facilities"),
-                    _legend_row(_swatch_circle("#f59e0b"), "Lab corporations"),
-                ],
-            ),
-            _construct_section(
-                "Leakage",
-                "#f59e0b",
-                [
-                    _legend_row(_swatch_circle("#10b981"), "Inbound patient flow"),
-                    _legend_row(_swatch_circle("#f59e0b"), "Outbound patient flow"),
-                ],
-            ),
-            _construct_section(
-                "Access",
-                "#c084fc",
+                "Leakage (ZIP)",
+                "#34d399",
                 [
                     _legend_row(
                         html.Div(
                             style={
-                                "width": "11px",
-                                "height": "11px",
+                                "width": "36px",
+                                "height": "10px",
+                                "borderRadius": "4px",
+                                "background": "linear-gradient(90deg, #ffffff, #93c5fd, #1e40af)",
+                                "flexShrink": "0",
+                            }
+                        ),
+                        "White = lower modeled leakage · Dark blue = higher",
+                    ),
+                ],
+            ),
+            _construct_section(
+                "Providers",
+                "#60a5fa",
+                [
+                    _legend_row(_swatch_circle("#4ade80"), "In-network"),
+                    _legend_row(_swatch_circle("#f87171"), "Competitors"),
+                    _legend_row(_swatch_circle("#fbbf24"), "Lab corporations"),
+                ],
+            ),
+            _construct_section(
+                "Proximity (on click)",
+                "#64748b",
+                [
+                    _legend_row(
+                        html.Div(
+                            style={
+                                "width": "14px",
+                                "height": "14px",
                                 "borderRadius": "50%",
-                                "border": "2px solid #c084fc",
+                                "border": "2px solid rgba(51,65,85,0.95)",
                                 "backgroundColor": "transparent",
                                 "flexShrink": "0",
                             }
                         ),
-                        "Drive-time convenience (planned)",
+                        "5, 10, 20 mile rings from selection",
                     ),
                 ],
             ),
+        ],
+    )
+
+
+def _reference_construct(
+    title: str,
+    accent: str,
+    definition: str,
+    key_content: list,
+) -> html.Div:
+    return html.Div(
+        style=_CARD,
+        children=[
+            html.H4(title, style={"margin": "0 0 4px 0", "color": accent}),
+            html.Div("Definition", style=_LABEL_STYLE),
+            html.P(definition, style={"margin": "0 0 4px 0", "color": "#cbd5e1"}),
+            html.Div("Key", style=_LABEL_STYLE),
+            html.Div(children=key_content),
         ],
     )
 
@@ -155,119 +190,98 @@ def _reference_panel() -> html.Div:
         style=REF_PANEL_VISIBLE_STYLE,
         children=[
             html.Div(
-                style={
-                    "backgroundColor": "#0f172a",
-                    "border": "1px solid #1e293b",
-                    "borderRadius": "10px",
-                    "padding": "12px",
-                    "marginBottom": "12px",
-                },
+                style=_CARD,
                 children=[
-                    html.H4("Main Objective", style={"margin": "0 0 8px 0"}),
+                    html.H4("Main objective", style={"margin": "0 0 8px 0"}),
                     html.P(
                         "Where should we invest next to capture the most patients and revenue?",
                         style={"margin": 0, "color": "#cbd5e1"},
                     ),
                 ],
             ),
-            html.Div(
-                style={
-                    "backgroundColor": "#0f172a",
-                    "border": "1px solid #1e293b",
-                    "borderRadius": "10px",
-                    "padding": "12px",
-                    "marginBottom": "12px",
-                },
-                children=[
-                    html.H4("Constructs", style={"margin": "0 0 8px 0"}),
-                    html.P(
-                        "Coverage: Orlando Health vs other facilities (red dots) from CMS NPPES. Full list: frontend/data/nppes_florida_facilities.csv — filter column owner = Competitor for non–Orlando Health.",
-                        style={"margin": "0 0 6px 0", "color": "#cbd5e1"},
+            _reference_construct(
+                "Coverage",
+                "#60a5fa",
+                "Which organizations operate sites in Florida and how we classify them relative to our network (in-network vs competitor vs lab corporation).",
+                [
+                    _legend_row(_swatch_circle("#4ade80"), "In-network — our system facilities (NPPES + internal tagging)."),
+                    _legend_row(_swatch_circle("#f87171"), "Competitors — other active providers in the same geography."),
+                    _legend_row(_swatch_circle("#fbbf24"), "Lab corporations — high-volume lab taxonomy (e.g. 291)."),
+                ],
+            ),
+            _reference_construct(
+                "Leakage",
+                "#34d399",
+                "ZIP-level pressure from competitor presence and local demand: where modeled outflow risk is higher (deeper blue) vs lower (lighter / white), using population and provider counts.",
+                [
+                    _legend_row(
+                        html.Div(
+                            style={
+                                "width": "36px",
+                                "height": "10px",
+                                "borderRadius": "4px",
+                                "background": "linear-gradient(90deg, #ffffff, #93c5fd, #1e40af)",
+                                "flexShrink": "0",
+                            }
+                        ),
+                        "Choropleth fill: white = lower modeled leakage, dark blue = higher (0–100 scale).",
                     ),
-                    html.P(
-                        "Leakage: Inbound volume vs outbound patient leakage by service line.",
-                        style={"margin": "0 0 6px 0", "color": "#cbd5e1"},
+                    _legend_row(
+                        html.Span("ℹ", style={"color": "#94a3b8", "width": "11px", "textAlign": "center"}),
+                        "Click a ZIP on the heatmap for counts, population, and leakage in the selection card.",
                     ),
-                    html.P(
-                        "Access: 5/10/20/45-minute access approximation to identify convenience gaps.",
-                        style={"margin": 0, "color": "#cbd5e1"},
+                ],
+            ),
+            _reference_construct(
+                "Proximity",
+                "#64748b",
+                "How far a chosen point is from the nearest in-network site, and how far that reach extends in simple mile rings (great-circle, not drive time).",
+                [
+                    _legend_row(
+                        html.Div(
+                            style={
+                                "width": "14px",
+                                "height": "14px",
+                                "borderRadius": "50%",
+                                "border": "2px solid rgba(51,65,85,0.95)",
+                                "backgroundColor": "transparent",
+                                "flexShrink": "0",
+                            }
+                        ),
+                        "After you click a ZIP or provider, dark navy rings show 5, 10, and 20 statute miles from that point.",
+                    ),
+                    _legend_row(
+                        html.Span("ℹ", style={"color": "#94a3b8", "width": "11px", "textAlign": "center"}),
+                        "Selection card reports straight-line miles to the closest in-network site.",
                     ),
                 ],
             ),
             html.Div(
-                style={
-                    "backgroundColor": "#0f172a",
-                    "border": "1px solid #1e293b",
-                    "borderRadius": "10px",
-                    "padding": "12px",
-                },
+                style=_CARD,
                 children=[
-                    html.H4("Opportunity Score", style={"margin": "0 0 8px 0"}),
+                    html.H4("Opportunity", style={"margin": "0 0 8px 0", "color": "#93c5fd"}),
                     html.P(
-                        "Opportunity score combines coverage, leakage, and access to rank where expansion can create the most value.",
-                        style={"margin": "0 0 8px 0", "color": "#cbd5e1"},
+                        "Ranks ZIPs where expansion may matter most: high local population, competitor pressure relative to our footprint, and distance from in-network access.",
+                        style={"margin": "0 0 10px 0", "color": "#cbd5e1"},
                     ),
                     html.Div(
-                        "Formula: (Coverage + Leakage + Access) weighted into a single expansion score.",
+                        "Opportunity = Population × (Competitor ÷ (Our + 1)) × Access Score",
                         style={
                             "backgroundColor": "#111827",
                             "border": "1px solid #334155",
                             "borderRadius": "8px",
-                            "padding": "8px 10px",
-                            "fontSize": "12px",
+                            "padding": "10px 12px",
+                            "fontSize": "13px",
                             "color": "#93c5fd",
+                            "fontFamily": "ui-monospace, monospace",
                         },
+                    ),
+                    html.P(
+                        "Access Score is 0–100: min(100, 2 × straight-line miles to nearest in-network site); if none exist in the extract, 100.",
+                        style={"margin": "10px 0 0 0", "fontSize": "12px", "color": "#94a3b8"},
                     ),
                 ],
             ),
-        ],
-    )
-
-
-def _controls_panel() -> html.Div:
-    return html.Div(
-        id="panel-controls",
-        style=PANEL_HIDDEN_STYLE,
-        children=[
-            html.Div(
-                style={"paddingTop": "16px"},
-                children=[
-                    html.Div(
-                        style={"marginBottom": "22px"},
-                        children=[
-                            html.Label("Service Line", style={"display": "block", "marginBottom": "8px"}),
-                            dcc.Dropdown(
-                                id="service-line",
-                                options=[
-                                    {"label": "All", "value": "All"},
-                                    {"label": "Cardiology", "value": "Cardiology"},
-                                    {"label": "Primary Care", "value": "Primary Care"},
-                                    {"label": "Urgent Care", "value": "Urgent Care"},
-                                    {"label": "Diagnostics", "value": "Diagnostics"},
-                                    {"label": "Other", "value": "Other"},
-                                ],
-                                value="All",
-                                clearable=False,
-                                style={"backgroundColor": "#0f172a", "color": "#0f172a"},
-                            ),
-                        ],
-                    ),
-                    html.Div(
-                        style={"marginBottom": "22px"},
-                        children=[
-                            html.Label("Drive-Time Approximation (minutes)", style={"display": "block", "marginBottom": "8px"}),
-                            dcc.Slider(
-                                id="drive-time",
-                                min=5,
-                                max=45,
-                                step=5,
-                                marks={5: "5", 10: "10", 20: "20", 45: "45"},
-                                value=10,
-                            ),
-                        ],
-                    ),
-                ],
-            )
         ],
     )
 
@@ -276,7 +290,9 @@ def _opportunity_panel() -> html.Div:
     return html.Div(
         id="panel-opportunity",
         style={"display": "none"},
-        children=[html.Div(id="opportunity-table", style={"paddingTop": "14px", "fontSize": "14px"})],
+        children=[
+            html.Div(id="opportunity-table", style={"paddingTop": "14px", "fontSize": "14px"}),
+        ],
     )
 
 
@@ -314,13 +330,6 @@ def build_layout() -> html.Div:
                                 className=TAB_BTN_ACTIVE,
                             ),
                             html.Button(
-                                "Controls",
-                                id="btn-tab-controls",
-                                n_clicks=0,
-                                type="button",
-                                className=TAB_BTN_IDLE,
-                            ),
-                            html.Button(
                                 "Opportunity",
                                 id="btn-tab-opportunity",
                                 n_clicks=0,
@@ -338,7 +347,6 @@ def build_layout() -> html.Div:
                         },
                         children=[
                             _reference_panel(),
-                            _controls_panel(),
                             _opportunity_panel(),
                         ],
                     ),
@@ -347,6 +355,25 @@ def build_layout() -> html.Div:
             html.Div(
                 style={"flex": 1, "position": "relative"},
                 children=[
+                    dcc.Store(id="map-selection", data=None),
+                    html.Div(
+                        style={"display": "none"},
+                        children=[
+                            dcc.Dropdown(
+                                id="service-line",
+                                options=[
+                                    {"label": "All", "value": "All"},
+                                    {"label": "Cardiology", "value": "Cardiology"},
+                                    {"label": "Primary Care", "value": "Primary Care"},
+                                    {"label": "Urgent Care", "value": "Urgent Care"},
+                                    {"label": "Diagnostics", "value": "Diagnostics"},
+                                    {"label": "Other", "value": "Other"},
+                                ],
+                                value="All",
+                                clearable=False,
+                            ),
+                        ],
+                    ),
                     dcc.Graph(
                         id="map-graph",
                         style={"height": "100%", "width": "100%"},
@@ -355,12 +382,45 @@ def build_layout() -> html.Div:
                             "displaylogo": False,
                             "scrollZoom": True,
                             "doubleClick": "reset",
+                            "doubleClickDelay": 200,
+                            "plotGlPixelRatio": 1,
                             "modeBarButtonsToRemove": [
                                 "lasso2d",
                                 "select2d",
                                 "toImage",
                             ],
                         },
+                    ),
+                    html.Div(
+                        style={
+                            "position": "absolute",
+                            "left": "14px",
+                            "top": "14px",
+                            "zIndex": "5",
+                            "display": "flex",
+                            "flexDirection": "column",
+                            "gap": "10px",
+                            "alignItems": "flex-start",
+                            "maxWidth": "min(340px, 92vw)",
+                        },
+                        children=[
+                            html.Button(
+                                "Clear selection",
+                                id="btn-clear-map-selection",
+                                n_clicks=0,
+                                type="button",
+                                style={
+                                    "backgroundColor": "rgba(15,23,42,0.95)",
+                                    "color": "#e2e8f0",
+                                    "border": "1px solid #475569",
+                                    "borderRadius": "8px",
+                                    "padding": "6px 12px",
+                                    "fontSize": "12px",
+                                    "cursor": "pointer",
+                                },
+                            ),
+                            html.Div(id="map-selection-insight"),
+                        ],
                     ),
                     _map_legend(),
                 ],

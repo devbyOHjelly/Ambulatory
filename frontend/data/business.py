@@ -17,6 +17,7 @@ class Facility:
     volume: int
     npi: str | None = None
     taxonomy: str | None = None
+    zip5: str | None = None  # 5-digit ZIP / ZCTA for leakage joins
 
 
 # Used when nppes_florida_facilities.csv has not been built yet

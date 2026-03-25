@@ -67,18 +67,20 @@ def load_florida_coverage_facilities(csv_path: Path | None = None) -> List[Facil
         return []
     df = pd.read_csv(path, dtype={"npi": str})
     out: List[Facility] = []
-    for row in df.itertuples(index=False):
+    for _, row in df.iterrows():
+        z = row.get("zip")
         out.append(
             Facility(
-                name=str(row.name),
-                kind=str(row.kind),
-                owner=str(row.owner),
-                lat=float(row.lat),
-                lon=float(row.lon),
-                service_line=str(row.service_line),
-                volume=int(row.volume) if pd.notna(row.volume) else 0,
-                npi=str(row.npi).strip() if pd.notna(row.npi) else None,
-                taxonomy=str(row.taxonomy) if pd.notna(row.taxonomy) else None,
+                name=str(row["name"]),
+                kind=str(row["kind"]),
+                owner=str(row["owner"]),
+                lat=float(row["lat"]),
+                lon=float(row["lon"]),
+                service_line=str(row["service_line"]),
+                volume=int(row["volume"]) if pd.notna(row.get("volume")) else 0,
+                npi=str(row["npi"]).strip() if pd.notna(row.get("npi")) else None,
+                taxonomy=str(row["taxonomy"]) if pd.notna(row.get("taxonomy")) else None,
+                zip5=str(z).strip() if pd.notna(z) else None,
             )
         )
     return out

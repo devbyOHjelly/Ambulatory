@@ -1,22 +1,13 @@
 from __future__ import annotations
 
-from dash import Input, Output, callback_context, html
+from dash import Input, Output, State, callback_context, html
 
-from data import opportunities
-from layout import (
-    CTRL_PANEL_VISIBLE_STYLE,
-    OPP_PANEL_VISIBLE_STYLE,
-    PANEL_HIDDEN_STYLE,
-    REF_PANEL_VISIBLE_STYLE,
-    TAB_BTN_ACTIVE,
-    TAB_BTN_IDLE,
-)
-from map_view import build_map
-
+from data.opportunity_scores import compute_zip_opportunity_table
+from layout import OPP_PANEL_VISIBLE_STYLE, PANEL_HIDDEN_STYLE, REF_PANEL_VISIBLE_STYLE, TAB_BTN_ACTIVE, TAB_BTN_IDLE
+from map_view import build_map_with_insight, parse_map_click
 
 _TAB_MAP = {
     "btn-tab-reference": "reference",
-    "btn-tab-controls": "controls",
     "btn-tab-opportunity": "opportunity",
 }
 
@@ -37,58 +28,60 @@ def _active_tab() -> str:
 def register_callbacks(app) -> None:
     @app.callback(
         Output("panel-reference", "style"),
-        Output("panel-controls", "style"),
         Output("panel-opportunity", "style"),
         Output("btn-tab-reference", "className"),
-        Output("btn-tab-controls", "className"),
         Output("btn-tab-opportunity", "className"),
         Input("btn-tab-reference", "n_clicks"),
-        Input("btn-tab-controls", "n_clicks"),
         Input("btn-tab-opportunity", "n_clicks"),
     )
-    def switch_folder_tabs(_n1, _n2, _n3):
+    def switch_folder_tabs(_n1, _n2):
         active = _active_tab()
         ref = REF_PANEL_VISIBLE_STYLE if active == "reference" else PANEL_HIDDEN_STYLE
-        ctrl = CTRL_PANEL_VISIBLE_STYLE if active == "controls" else PANEL_HIDDEN_STYLE
         opp = OPP_PANEL_VISIBLE_STYLE if active == "opportunity" else PANEL_HIDDEN_STYLE
         c1 = TAB_BTN_ACTIVE if active == "reference" else TAB_BTN_IDLE
-        c2 = TAB_BTN_ACTIVE if active == "controls" else TAB_BTN_IDLE
-        c3 = TAB_BTN_ACTIVE if active == "opportunity" else TAB_BTN_IDLE
-        return ref, ctrl, opp, c1, c2, c3
+        c2 = TAB_BTN_ACTIVE if active == "opportunity" else TAB_BTN_IDLE
+        return ref, opp, c1, c2
 
     @app.callback(
         Output("map-graph", "figure"),
+        Output("map-selection-insight", "children"),
+        Output("map-selection", "data"),
         Input("service-line", "value"),
-        Input("drive-time", "value"),
+        Input("map-graph", "clickData"),
+        Input("btn-clear-map-selection", "n_clicks"),
+        State("map-selection", "data"),
     )
-    def update_map(service_line: str, drive_time_minutes: int):
-        return build_map(service_line, drive_time_minutes)
+    def map_click_and_redraw(service_line: str, click_data, _n_clear, prior_selection):
+        ctx = callback_context
+        selection = prior_selection
+        if ctx.triggered:
+            tid = ctx.triggered[0]["prop_id"]
+            if tid.startswith("service-line") or tid.startswith("btn-clear-map-selection"):
+                selection = None
+            elif tid.startswith("map-graph") and click_data:
+                parsed = parse_map_click(click_data, service_line=service_line)
+                if parsed:
+                    selection = parsed
+        fig, insight = build_map_with_insight(service_line, 10, selection)
+        return fig, insight, selection
 
-    @app.callback(
-        Output("opportunity-table", "children"),
-        Input("service-line", "value"),
-    )
-    def update_opportunity_table(_service_line: str):
-        ranked = opportunities.sort_values("score", ascending=False)
-        cards = [
-            html.Div(
-                style={
-                    "border": "1px solid #334155",
-                    "borderRadius": "10px",
-                    "padding": "12px",
-                    "marginBottom": "12px",
-                    "backgroundColor": "#111827",
-                },
-                children=[
-                    html.Div("Sandbox Zone", style={"fontWeight": "700", "marginBottom": "6px", "color": "#93c5fd"}),
-                    html.Div(
-                        "Marker you can place anywhere on the map to test opportunity for that location.",
-                        style={"color": "#cbd5e1"},
-                    ),
-                ],
-            )
-        ]
-        for i, row in enumerate(ranked.itertuples(), start=1):
+    @app.callback(Output("opportunity-table", "children"), Input("service-line", "value"))
+    def update_opportunity_table(service_line: str):
+        rows = compute_zip_opportunity_table(service_line=service_line, top_n=20)
+        if not rows:
+            return html.Div("No ZIP-level rows for this filter.", style={"color": "#94a3b8"})
+
+        def _fmt_int(x: float) -> str:
+            return f"{int(round(x)):,}"
+
+        cards: list = []
+        for i, r in enumerate(rows, start=1):
+            pop = r["population"]
+            our = r["our"]
+            comp = r["competitor"]
+            acc = r["access_score"]
+            opp = r["opportunity"]
+            ratio = comp / (our + 1)
             cards.append(
                 html.Div(
                     style={
@@ -99,9 +92,41 @@ def register_callbacks(app) -> None:
                         "backgroundColor": "#0f172a",
                     },
                     children=[
-                        html.Div(f"#{i} {row.zone}", style={"fontWeight": "600", "marginBottom": "3px"}),
-                        html.Div(f"Opportunity Score: {row.score}", style={"color": "#22c55e", "marginBottom": "6px"}),
-                        html.Div(row.rationale, style={"color": "#cbd5e1"}),
+                        html.Div(
+                            f"#{i}  ZIP {r['zip']}",
+                            style={"fontWeight": "600", "marginBottom": "8px", "color": "#e2e8f0"},
+                        ),
+                        html.Div(
+                            f"Opportunity: {_fmt_int(opp)}",
+                            style={"color": "#22c55e", "fontWeight": "700", "marginBottom": "8px"},
+                        ),
+                        html.Div(
+                            [
+                                html.Span("Population: ", style={"color": "#64748b"}),
+                                html.Span(_fmt_int(pop), style={"color": "#cbd5e1"}),
+                            ],
+                            style={"marginBottom": "4px"},
+                        ),
+                        html.Div(
+                            [
+                                html.Span("Our / Competitor: ", style={"color": "#64748b"}),
+                                html.Span(f"{our} / {comp}", style={"color": "#cbd5e1"}),
+                            ],
+                            style={"marginBottom": "4px"},
+                        ),
+                        html.Div(
+                            [
+                                html.Span("Competitor ÷ (Our + 1): ", style={"color": "#64748b"}),
+                                html.Span(f"{ratio:.3f}", style={"color": "#cbd5e1"}),
+                            ],
+                            style={"marginBottom": "4px"},
+                        ),
+                        html.Div(
+                            [
+                                html.Span("Access score: ", style={"color": "#64748b"}),
+                                html.Span(f"{acc:.1f}", style={"color": "#cbd5e1"}),
+                            ],
+                        ),
                     ],
                 )
             )
