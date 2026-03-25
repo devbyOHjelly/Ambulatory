@@ -1,0 +1,97 @@
+html,
+body,
+#react-entry-point,
+#_dash-app-content {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  background: #020617;
+  overflow: hidden;
+  font-family: "Open Sans", Arial, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* Hide scrollbars globally while preserving layout behavior. */
+*::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+* {
+  scrollbar-width: none;
+}
+
+/*
+ * Map: remove Mapbox / MapLibre UI (compass, zoom, blue logo / info buttons).
+ * Plotly can nest controls under several class names; hide the full stack.
+ */
+.js-plotly-plot .mapboxgl-control-container,
+.js-plotly-plot .mapboxgl-ctrl,
+.js-plotly-plot .mapboxgl-ctrl-group,
+.js-plotly-plot .mapboxgl-ctrl-logo,
+.js-plotly-plot a.mapboxgl-ctrl-logo,
+.js-plotly-plot .mapboxgl-ctrl-bottom-right,
+.js-plotly-plot .mapboxgl-ctrl-bottom-left,
+.js-plotly-plot .mapboxgl-ctrl-top-right,
+.js-plotly-plot .mapboxgl-ctrl-top-left,
+.js-plotly-plot .mapboxgl-ctrl-attrib,
+.js-plotly-plot .mapboxgl-ctrl-attrib-button,
+.js-plotly-plot .maplibregl-control-container,
+.js-plotly-plot .maplibregl-ctrl,
+.js-plotly-plot .maplibregl-ctrl-logo,
+.js-plotly-plot .maplibregl-ctrl-bottom-right,
+.js-plotly-plot .maplibregl-ctrl-top-right {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  overflow: hidden !important;
+}
+
+/* Simple folder-style tab bar: one rounded bar, three equal sections. */
+.folder-tab-bar {
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+  border: 1px solid #1e293b;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #0f172a;
+  margin-bottom: 14px;
+  flex-shrink: 0;
+}
+
+.folder-tab {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  padding: 10px 8px;
+  font-size: 13px;
+  font-family: inherit;
+  color: #cbd5e1;
+  background: #0f172a;
+  border: none;
+  border-right: 1px solid #1e293b;
+  cursor: pointer;
+  text-align: center;
+}
+
+.folder-tab:last-of-type {
+  border-right: none;
+}
+
+.folder-tab-active {
+  background: #1e293b !important;
+  color: #f8fafc !important;
+  font-weight: 600;
+}
+
+.folder-tab:hover:not(.folder-tab-active) {
+  background: #111827;
+}
