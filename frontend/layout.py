@@ -45,6 +45,27 @@ _CARD = {
     "marginBottom": "12px",
 }
 
+_REF_FORMULA_BOX = {
+    "backgroundColor": "#111827",
+    "border": "1px solid #334155",
+    "borderRadius": "8px",
+    "padding": "10px 12px",
+    "fontSize": "12px",
+    "color": "#e2e8f0",
+    "fontFamily": "ui-monospace, monospace",
+    "lineHeight": "1.55",
+    "marginBottom": "8px",
+    "whiteSpace": "pre-wrap",
+}
+
+_REF_SIMPLE = {
+    "margin": "0",
+    "fontSize": "12px",
+    "color": "#94a3b8",
+    "fontStyle": "italic",
+    "lineHeight": "1.45",
+}
+
 
 def _legend_row(swatch: html.Div, label: str) -> html.Div:
     return html.Div(
@@ -171,17 +192,29 @@ def _reference_construct(
     accent: str,
     definition: str,
     key_content: list,
+    *,
+    how_calculated: list | None = None,
 ) -> html.Div:
-    return html.Div(
-        style=_CARD,
-        children=[
-            html.H4(title, style={"margin": "0 0 4px 0", "color": accent}),
-            html.Div("Definition", style=_LABEL_STYLE),
-            html.P(definition, style={"margin": "0 0 4px 0", "color": "#cbd5e1"}),
+    kids: list = [
+        html.H4(title, style={"margin": "0 0 4px 0", "color": accent}),
+        html.Div("Definition", style=_LABEL_STYLE),
+        html.P(definition, style={"margin": "0 0 4px 0", "color": "#cbd5e1"}),
+    ]
+    if how_calculated:
+        kids.append(html.Div("How it's calculated", style=_LABEL_STYLE))
+        kids.append(
+            html.Div(
+                style={"display": "flex", "flexDirection": "column", "gap": "6px", "marginBottom": "4px"},
+                children=how_calculated,
+            )
+        )
+    kids.extend(
+        [
             html.Div("Key", style=_LABEL_STYLE),
             html.Div(children=key_content),
-        ],
+        ]
     )
+    return html.Div(style=_CARD, children=kids)
 
 
 def _reference_panel() -> html.Div:
@@ -206,7 +239,27 @@ def _reference_panel() -> html.Div:
                 [
                     _legend_row(_swatch_circle("#4ade80"), "In-network — our system facilities (NPPES + internal tagging)."),
                     _legend_row(_swatch_circle("#f87171"), "Competitors — other active providers in the same geography."),
-                    _legend_row(_swatch_circle("#fbbf24"), "Lab corporations — high-volume lab taxonomy (e.g. 291)."),
+                    _legend_row(_swatch_circle("#fbbf24"), "Lab corporations — known national or regional lab chains."),
+                ],
+                how_calculated=[
+                    html.P(
+                        "Each facility gets one color using priority rules (not a numeric score):",
+                        style={"margin": 0, "color": "#94a3b8", "fontSize": "12px"},
+                    ),
+                    html.Div(
+                        "1) In-network  →  tagged as our system\n"
+                        "2) Else lab corp  →  name matches known lab chains\n"
+                        "3) Else  →  Competitor",
+                        style=_REF_FORMULA_BOX,
+                    ),
+                    html.P(
+                        "Simple: each place is us, a lab chain, or other. Colors keep the map easy to scan.",
+                        style={**_REF_SIMPLE, "marginTop": "6px"},
+                    ),
+                    html.P(
+                        "Leakage and “nearest in-network” can also treat NPIs on an allowlist as ours; map dots use the rules above.",
+                        style={"margin": "8px 0 0 0", "color": "#94a3b8", "fontSize": "12px"},
+                    ),
                 ],
             ),
             _reference_construct(
@@ -229,6 +282,22 @@ def _reference_panel() -> html.Div:
                     _legend_row(
                         html.Span("ℹ", style={"color": "#94a3b8", "width": "11px", "textAlign": "center"}),
                         "Click a ZIP on the heatmap for counts, population, and leakage in the selection card.",
+                    ),
+                ],
+                how_calculated=[
+                    html.P(
+                        "Per ZIP (5-digit), after the service-line filter: count Our vs Competitor sites. Population comes from a ZIP lookup.",
+                        style={"margin": 0, "color": "#94a3b8", "fontSize": "12px"},
+                    ),
+                    html.Div(
+                        "Leakage score (0–100) scales this idea across Florida:\n"
+                        "  (competitor share) × ln(1 + population ÷ providers in ZIP)\n"
+                        "Lowest ZIP → 0, highest → 100 (ZIPs with no providers are excluded).",
+                        style=_REF_FORMULA_BOX,
+                    ),
+                    html.P(
+                        "Simple: darker ZIPs score higher for crowded areas with lots of competitors. Not money or a real percent.",
+                        style={**_REF_SIMPLE, "marginTop": "6px"},
                     ),
                 ],
             ),
@@ -255,6 +324,22 @@ def _reference_panel() -> html.Div:
                         "Selection card reports straight-line miles to the closest in-network site.",
                     ),
                 ],
+                how_calculated=[
+                    html.P(
+                        "All distances use great-circle geometry on the Earth (haversine), in statute miles — not drive time or traffic.",
+                        style={"margin": 0, "color": "#94a3b8", "fontSize": "12px"},
+                    ),
+                    html.Div(
+                        "Nearest in-network = min distance from the click point to each in-network facility\n"
+                        "Rings = closed loops at 5 mi, 10 mi, and 20 mi radius from that point\n"
+                        "ZIP clicks use the ZCTA centroid (approximate center of the ZIP polygon).",
+                        style=_REF_FORMULA_BOX,
+                    ),
+                    html.P(
+                        "Simple: straight line miles and rings on the map. Not how long a drive takes.",
+                        style={**_REF_SIMPLE, "marginTop": "6px"},
+                    ),
+                ],
             ),
             html.Div(
                 style=_CARD,
@@ -264,21 +349,19 @@ def _reference_panel() -> html.Div:
                         "Ranks ZIPs where expansion may matter most: high local population, competitor pressure relative to our footprint, and distance from in-network access.",
                         style={"margin": "0 0 10px 0", "color": "#cbd5e1"},
                     ),
+                    html.Div("How it's calculated", style=_LABEL_STYLE),
                     html.Div(
-                        "Opportunity = Population × (Competitor ÷ (Our + 1)) × Access Score",
-                        style={
-                            "backgroundColor": "#111827",
-                            "border": "1px solid #334155",
-                            "borderRadius": "8px",
-                            "padding": "10px 12px",
-                            "fontSize": "13px",
-                            "color": "#93c5fd",
-                            "fontFamily": "ui-monospace, monospace",
-                        },
+                        "Opportunity = Population × (Competitor ÷ (Our + 1)) × Access",
+                        style={**_REF_FORMULA_BOX, "color": "#93c5fd"},
                     ),
                     html.P(
-                        "Access Score is 0–100: min(100, 2 × straight-line miles to nearest in-network site); if none exist in the extract, 100.",
-                        style={"margin": "10px 0 0 0", "fontSize": "12px", "color": "#94a3b8"},
+                        "Simple: one number that grows with more people, more competitors than us, and being farther from our sites.",
+                        style={**_REF_SIMPLE, "marginTop": "6px"},
+                    ),
+                    html.Div("Key", style=_LABEL_STYLE),
+                    html.P(
+                        "Opportunity tab lists top ZIPs by this index for the selected service line.",
+                        style={"margin": 0, "color": "#cbd5e1", "fontSize": "13px"},
                     ),
                 ],
             ),
